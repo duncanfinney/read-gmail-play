@@ -1,6 +1,7 @@
 const fs = require('fs');
 const readline = require('readline');
-const {google} = require('googleapis');
+const { google } = require('googleapis');
+const readSquareMessages = require('./read-square-message')
 
 // If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
@@ -23,9 +24,9 @@ fs.readFile('credentials.json', (err, content) => {
  * @param {function} callback The callback to call with the authorized client.
  */
 function authorize(credentials, callback) {
-  const {client_secret, client_id, redirect_uris} = credentials.installed;
+  const { client_secret, client_id, redirect_uris } = credentials.installed;
   const oAuth2Client = new google.auth.OAuth2(
-      client_id, client_secret, redirect_uris[0]);
+    client_id, client_secret, redirect_uris[0]);
 
   // Check if we have previously stored a token.
   fs.readFile(TOKEN_PATH, (err, token) => {
@@ -72,19 +73,46 @@ function getNewToken(oAuth2Client, callback) {
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
 function listLabels(auth) {
-  const gmail = google.gmail({version: 'v1', auth});
-  gmail.users.labels.list({
-    userId: 'me',
-  }, (err, res) => {
+  const gmail = google.gmail({ version: 'v1', auth });
+  // gmail.users.messages.get({ userId:'me', id: '16cf2824129cca2a' }, (err, res) => {
+  //   if (err != null) {
+  //     return console.log('unable to sync with gmail:', err)
+  //   }
+  //   fs.writeFileSync('./message_example.json', JSON.stringify(res.data), 'utf8');
+  // });
+
+  gmail.users.messages.list({ userId: 'me', maxResults: 10, q: "from:receipts@messaging.squareup.com " }, (err, res) => {
     if (err) return console.log('The API returned an error: ' + err);
-    const labels = res.data.labels;
-    if (labels.length) {
-      console.log('Labels:');
-      labels.forEach((label) => {
-        console.log(`- ${label.name}`);
-      });
-    } else {
-      console.log('No labels found.');
-    }
-  });
+    res.data.messages.forEach(msg => {
+      gmail
+        .users
+        .messages
+        .get({ userId: 'me', id: msg.id })
+        .then(res => {
+          const messageData = res.data.payload.parts[0].parts[0].parts[0].body.data;
+          const buff = Buffer.from(messageData, 'base64');
+          const text = buff.toString('ascii');
+          const squareupUrl = (text.match(/https:\/\/squareup.com\/r\/.*/))[0]
+          console.log(squareupUrl.trim())
+          return squareupUrl
+        })
+        .then(url => readSquareMessages(url))
+        .then('done')
+    })
+  })
+
+  // gmail.users.labels.list({
+  //   userId: 'me',
+  // }, (err, res) => {
+  //   if (err) return console.log('The API returned an error: ' + err);
+  //   const labels = res.data.labels;
+  //   if (labels.length) {
+  //     console.log('Labels:');
+  //     labels.forEach((label) => {
+  //       console.log(`- ${label.name}`);
+  //     });
+  //   } else {
+  //     console.log('No labels found.');
+  //   }
+  // });
 }

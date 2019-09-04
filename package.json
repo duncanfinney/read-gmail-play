@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
-    "googleapis": "^39.2.0"
+    "googleapis": "^39.2.0",
+    "puppeteer": "^1.19.0"
   },
   "devDependencies": {},
   "scripts": {
