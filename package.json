@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
+    "bluebird": "^3.5.5",
     "googleapis": "^39.2.0",
     "moment": "^2.24.0",
     "puppeteer": "^1.19.0"

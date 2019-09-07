@@ -1,7 +1,8 @@
 const fs = require('fs');
 const readline = require('readline');
 const { google } = require('googleapis');
-const readSquareMessages = require('./read-square-message')
+const readSquareMessages = require('./read-square-message');
+const Promise = require('bluebird');
 
 // If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
@@ -81,24 +82,31 @@ function listLabels(auth) {
   //   fs.writeFileSync('./message_example.json', JSON.stringify(res.data), 'utf8');
   // });
 
-  gmail.users.messages.list({ userId: 'me', maxResults: 1, q: "from:receipts@messaging.squareup.com " }, (err, res) => {
+  gmail.users.messages.list({ userId: 'me', maxResults: 100, q: "from:receipts@messaging.squareup.com " }, (err, res) => {
     if (err) return console.log('The API returned an error: ' + err);
-    res.data.messages.forEach(msg => {
-      gmail
-        .users
-        .messages
-        .get({ userId: 'me', id: msg.id })
-        .then(res => {
-          const messageData = res.data.payload.parts[0].parts[0].parts[0].body.data;
-          const buff = Buffer.from(messageData, 'base64');
-          const text = buff.toString('ascii');
-          const squareupUrl = (text.match(/https:\/\/squareup.com\/r\/.*/))[0]
-          console.log(squareupUrl.trim())
-          return squareupUrl
-        })
-        .then(url => readSquareMessages(url))
-        .then('done')
-    })
+
+    Promise.map(res.data.messages, async (msg) => {
+      const res = await gmail.users.messages.get({ userId: 'me', id: msg.id });
+      const messageData = res.data.payload.parts[0].parts[0].parts[0].body.data;
+      const buff = Buffer.from(messageData, 'base64');
+      const text = buff.toString('ascii');
+      const squareupUrl = (text.match(/https:\/\/squareup.com\/r\/.*/))[0]
+      console.log(squareupUrl.trim())
+      await readSquareMessages(squareupUrl);
+      console.log('done', squareupUrl)
+    }, { concurrency: 6 })
+
+    // res.data.messages.forEach(msg => {
+    //   gmail
+    //     .users
+    //     .messages
+    //     .get({ userId: 'me', id: msg.id })
+    //     .then(res => {
+    //       return squareupUrl
+    //     })
+    //     .then(url => readSquareMessages(url))
+    //     .then('done')
+    // })
   })
 
   // gmail.users.labels.list({

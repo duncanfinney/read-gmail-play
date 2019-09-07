@@ -1,8 +1,6 @@
 const puppeteer = require('puppeteer');
 const moment = require('moment');
 
-const randomString = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-
 const browserPromise = puppeteer.launch({ headless: false, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
 
 async function readSquareMessages(url) {
@@ -17,6 +15,7 @@ async function readSquareMessages(url) {
   const { dateOfPurchase, merchantName, price } = data;
   const fileName = `images/${dateOfPurchase}__${merchantName}__${price}.jpg`
   await page.screenshot({ path: `${fileName}`, fullPage: true });
+  await page.close()
 }
 
 async function parseSquarePage(page) {
