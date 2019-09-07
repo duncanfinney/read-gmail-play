@@ -81,7 +81,7 @@ function listLabels(auth) {
   //   fs.writeFileSync('./message_example.json', JSON.stringify(res.data), 'utf8');
   // });
 
-  gmail.users.messages.list({ userId: 'me', maxResults: 10, q: "from:receipts@messaging.squareup.com " }, (err, res) => {
+  gmail.users.messages.list({ userId: 'me', maxResults: 1, q: "from:receipts@messaging.squareup.com " }, (err, res) => {
     if (err) return console.log('The API returned an error: ' + err);
     res.data.messages.forEach(msg => {
       gmail
