@@ -2,6 +2,8 @@ const puppeteer = require('puppeteer');
 const moment = require('moment');
 const Promise = require('bluebird');
 const genericPool = require('generic-pool')
+const fs = require('fs');
+Promise.promisifyAll(fs);
 
 const browserPromise = puppeteer.launch({ headless: false, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
 
@@ -26,18 +28,22 @@ async function readSquareMessages(url) {
 
   await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
 
-  const data = await parseSquarePage(page)
+  const data = await parseSquarePage(page, url)
   console.log(data)
 
   const { dateOfPurchase, merchantName, price } = data;
-  const fileName = `images/${dateOfPurchase}__${merchantName}__${price}.jpg`
+  const merchantNameSanitized = merchantName.replace(/ /gi, "-").replace(/[',"]*/gi, "")
+  const fileName = `images/${dateOfPurchase}__${merchantNameSanitized}__${price.toFixed(2)}.jpg`
   await page.screenshot({ path: `${fileName}`, fullPage: true });
 
   await pagePool.release(page)
+
+  await fs.appendFileAsync('transactions', JSON.stringify({ ...data, fileName }) + "\n")
+
   await Promise.delay(Math.floor(Math.random() * 1000) + 1000)
 }
 
-async function parseSquarePage(page) {
+async function parseSquarePage(page, url) {
 
   const textOfSelector = (selector) => page.$eval(selector, node => node.innerText);
 
@@ -52,7 +58,8 @@ async function parseSquarePage(page) {
   return {
     merchantName,
     dateOfPurchase,
-    price
+    price,
+    url
   }
 }
 
